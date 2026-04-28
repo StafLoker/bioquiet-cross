@@ -1,7 +1,7 @@
 class Statistics {
   final int totalRecords;
-  final int maxDb;
-  final int averageDb;
+  final double maxDb;
+  final double averageDb;
   final String feedback;
 
   Statistics({
