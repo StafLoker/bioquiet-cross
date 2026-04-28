@@ -14,7 +14,7 @@ class StatisticsService {
 
   static final Logger log = Logger("StatisticService");
 
-  void addRecord(Zepa zepa, double decibels) async {
+  Future<void> addRecord(Zepa zepa, double decibels) async {
     log.fine("Add record | ZEPA ID=${zepa.id} | Decibels=${decibels}db");
 
     final directory = await getApplicationDocumentsDirectory();

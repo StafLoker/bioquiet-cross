@@ -6,6 +6,14 @@
 	<true/>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
+	<!-- For using location services while the app is in the foreground -->
+    <key>NSLocationWhenInUseUsageDescription</key>
+    <string>This app needs access to location when open to track your position.</string>
+    <!-- For using location services at all times (background included) -->
+    <key>NSLocationAlwaysUsageDescription</key>
+    <string>This app needs access to location at all times to track your position.</string>
+    <!-- Optional: For using location services always but with an option for when in use -->
+    <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<key>CFBundleDisplayName</key>
 	<string>Bioquiet Cross</string>
 	<key>CFBundleExecutable</key>
