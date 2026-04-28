@@ -1,8 +1,14 @@
 import 'package:bioquiet_cross/screens/account_screen.dart';
 import 'package:bioquiet_cross/screens/map_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:logging/logging.dart';
 
 void main() {
+  Logger.root.level = Level.ALL;
+  Logger.root.onRecord.listen((record) {
+    debugPrint('${record.level.name} | ${record.loggerName} | ${record.time} | ${record.message}');
+  });
+
   runApp(const MyApp());
 }
 

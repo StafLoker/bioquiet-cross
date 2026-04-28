@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:logging/logging.dart';
 import '../models/statistics.dart';
 import '../widgets/statistics_card.dart';
 
@@ -7,6 +8,10 @@ class AccountScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final log = Logger('AccountScreen');
+
+    log.fine("Build screen");
+
     // Simulacion
     final myStats = Statistics(
       totalRecords: 27,
