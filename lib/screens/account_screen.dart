@@ -6,10 +6,10 @@ import '../widgets/statistics_card.dart';
 class AccountScreen extends StatelessWidget {
   const AccountScreen({super.key});
 
+  static final log = Logger('AccountScreen');
+
   @override
   Widget build(BuildContext context) {
-    final log = Logger('AccountScreen');
-
     log.fine("Build screen");
 
     // Simulacion
