@@ -3,6 +3,13 @@ class NoiseThresholds {
   final int dbWarning;
 
   NoiseThresholds({required this.dbSafe, required this.dbWarning});
+
+  factory NoiseThresholds.fromJson(Map<String, dynamic> json) {
+    return NoiseThresholds(
+      dbSafe: json['dbSafe'] ?? 55, // Nivel óptimo estándar
+      dbWarning: json['dbWarning'] ?? 70, // Límite de advertencia estándar
+    );
+  }
 }
 
 class Habitat {
@@ -23,6 +30,18 @@ class Habitat {
     this.conservation,
     this.globalAssessment,
   });
+
+  factory Habitat.fromJson(Map<String, dynamic> json) {
+    return Habitat(
+      code: json['code'],
+      description: json['description'],
+      priority: json['priority'],
+      coverHa: (json['coverHa'] as num?)?.toDouble(),
+      representativity: json['representativity'],
+      conservation: json['conservation'],
+      globalAssessment: json['globalAssessment'],
+    );
+  }
 }
 
 class Species {
@@ -43,6 +62,18 @@ class Species {
     this.conservation,
     this.global,
   });
+
+  factory Species.fromJson(Map<String, dynamic> json) {
+    return Species(
+      code: json['code'],
+      name: json['name'],
+      group: json['group'],
+      populationType: json['populationType'],
+      abundance: json['abundance'],
+      conservation: json['conservation'],
+      global: json['global'],
+    );
+  }
 }
 
 class Impact {
@@ -59,6 +90,16 @@ class Impact {
     this.occurrence,
     this.type,
   });
+
+  factory Impact.fromJson(Map<String, dynamic> json) {
+    return Impact(
+      code: json['code'],
+      description: json['description'],
+      intensity: json['intensity'],
+      occurrence: json['occurrence'],
+      type: json['type'],
+    );
+  }
 }
 
 class Management {
@@ -73,6 +114,15 @@ class Management {
     this.planUrl,
     this.measures,
   });
+
+  factory Management.fromJson(Map<String, dynamic> json) {
+    return Management(
+      orgName: json['orgName'],
+      orgEmail: json['orgEmail'],
+      planUrl: json['planUrl'],
+      measures: json['measures'],
+    );
+  }
 }
 
 class GeoJsonGeometry {
@@ -80,6 +130,13 @@ class GeoJsonGeometry {
   final dynamic coordinates;
 
   GeoJsonGeometry({required this.type, required this.coordinates});
+
+  factory GeoJsonGeometry.fromJson(Map<String, dynamic> json) {
+    return GeoJsonGeometry(
+      type: json['type'] ?? 'Polygon',
+      coordinates: json['coordinates'],
+    );
+  }
 }
 
 class Zepa {
@@ -112,4 +169,34 @@ class Zepa {
     required this.management,
     required this.geometry,
   });
+
+  factory Zepa.fromJson(Map<String, dynamic> json) {
+    return Zepa(
+      id: json['id'] ?? '',
+      name: json['name'] ?? 'Espacio Natural',
+      noiseThresholds: NoiseThresholds.fromJson(json['noiseThresholds'] ?? {}),
+      areaHa: (json['areaHa'] as num?)?.toDouble(),
+      dateSpa: json['dateSpa'],
+      spaLegalRef: json['spaLegalRef'],
+      description: json['description'],
+      quality: json['quality'],
+      habitats: (json['habitats'] as List?)
+              ?.map((e) => Habitat.fromJson(e))
+              .toList() ??
+          [],
+      species: (json['species'] as List?)
+              ?.map((e) => Species.fromJson(e))
+              .toList() ??
+          [],
+      impacts: (json['impacts'] as List?)
+              ?.map((e) => Impact.fromJson(e))
+              .toList() ??
+          [],
+      management: (json['management'] as List?)
+              ?.map((e) => Management.fromJson(e))
+              .toList() ??
+          [],
+      geometry: GeoJsonGeometry.fromJson(json['geometry'] ?? {}),
+    );
+  }
 }

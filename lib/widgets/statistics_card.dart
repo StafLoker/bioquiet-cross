@@ -18,9 +18,9 @@ class StatisticsCard extends StatelessWidget {
           children: [
             _buildStatItem("Total registros", "${stats.totalRecords}"),
             const Divider(height: 30),
-            _buildStatItem("Ruido máximo", "${stats.maxDb} dB"),
+            _buildStatItem("Ruido máximo", "${stats.maxDb.toStringAsFixed(2)} dB"),
             const Divider(height: 30),
-            _buildStatItem("Ruido promedio", "${stats.averageDb} dB"),
+            _buildStatItem("Ruido promedio", "${stats.averageDb.toStringAsFixed(2)} dB"),
             const Divider(height: 40),
             Center(
               child: Text(

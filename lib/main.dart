@@ -9,79 +9,82 @@ void main() {
     debugPrint('${record.level.name} | ${record.loggerName} | ${record.time} | ${record.message}');
   });
 
-  runApp(const MyApp());
+  runApp(const BioQuietApp());
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class BioQuietApp extends StatelessWidget {
+  const BioQuietApp({super.key});
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'BioQuiet',
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a purple toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.green
-        // and then invoke "hot reload" (save your changes or press the "hot
-        // reload" button in a Flutter-supported IDE, or press "r" if you used
-        // the command line to start the app).
-        //
-        // Notice that the counter didn't reset back to zero; the application
-        // state is not lost during the reload. To reset the state, use hot
-        // restart instead.
-        //
-        // This works for code too, not just values: Most code changes can be
-        // tested with just a hot reload.
-        colorScheme: .fromSeed(seedColor: Colors.deepPurple),
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+        useMaterial3: true,
       ),
-      home: const MainScreen(),
+      home: const MainNavigationScreen(),
     );
   }
 }
 
-class MainScreen extends StatefulWidget {
-  const MainScreen({super.key});
+class MainNavigationScreen extends StatefulWidget {
+  const MainNavigationScreen({super.key});
 
   @override
-  State<MainScreen> createState() => _MainScreenState();
+  State<MainNavigationScreen> createState() => _MainNavigationScreenState();
 }
 
-class _MainScreenState extends State<MainScreen> {
-  int _selectedIndex = 0;
-  final List<Widget> _screens = [
-    MapScreen(),
-    AccountScreen()
-  ];
+class _MainNavigationScreenState extends State<MainNavigationScreen> {
+  int _currentTabIndex = 0;
+  final GlobalKey<AccountScreenState> _accountKey = GlobalKey<AccountScreenState>();
+  
+  late final List<Widget> _appScreens;
 
-  void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
+  @override
+  void initState() {
+    super.initState();
+    _appScreens = [
+      const MapScreen(),
+      AccountScreen(key: _accountKey)
+    ];
   }
+
+  void _onTabChanged(int index) {
+    setState(() {
+      _currentTabIndex = index;
+    });
+
+    // Si el usuario cambia a la pestaña de Cuenta, refrescamos los datos automáticamente
+    if (index == 1) {
+      _accountKey.currentState?.loadUserStatistics();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Center(
-        child: _screens.elementAt(_selectedIndex),
+      body: IndexedStack(
+        index: _currentTabIndex,
+        children: _appScreens,
       ),
       bottomNavigationBar: BottomNavigationBar(
-        items: const <BottomNavigationBarItem>[
+        items: const [
           BottomNavigationBarItem(
-            icon: Icon(Icons.map),
+            icon: Icon(Icons.map_outlined),
+            activeIcon: Icon(Icons.map),
             label: 'Map',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.account_circle_outlined),
+            activeIcon: Icon(Icons.account_circle),
             label: 'Account',
           ),
         ],
-        currentIndex: _selectedIndex,
-        selectedItemColor: Colors.blue,
-        onTap: _onItemTapped,
+        currentIndex: _currentTabIndex,
+        selectedItemColor: Colors.deepPurple,
+        onTap: _onTabChanged,
       ),
     );
   }
