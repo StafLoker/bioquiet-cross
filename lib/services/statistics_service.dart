@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:logging/logging.dart';
 import 'package:path_provider/path_provider.dart';
 
@@ -26,7 +27,7 @@ class StatisticsService {
     }
 
     await file.writeAsString(
-      '$timestamp,${zepa.id},$decibels',
+      '$timestamp,${zepa.id},$decibels\n',
       mode: FileMode.append,
     );
   }
@@ -34,8 +35,6 @@ class StatisticsService {
   Future<Statistics> getStatistics() async {
     log.fine("Retrieved current statistics");
 
-    int totalRecords = 0;
-    double averageDb = 0, maxDb = 0, sum = 0;
     final directory = await getApplicationDocumentsDirectory();
     final file = File('${directory.path}/$filename');
 
@@ -49,25 +48,29 @@ class StatisticsService {
       );
     }
 
-    await file
-        .openRead()
-        .transform(utf8.decoder)
-        .transform(LineSplitter())
-        .skip(1)
-        .forEach((line) {
-          if (line.trim().isEmpty) return;
+    final content = await file.readAsString();
+    return compute(_parseCsv, content);
+  }
 
-          final cols = line.split(',');
+  static Statistics _parseCsv(String content) {
+    int totalRecords = 0;
+    double maxDb = 0, sum = 0;
 
-          if (cols.length < 3) return;
+    final lines = const LineSplitter().convert(content);
+    for (var i = 1; i < lines.length; i++) {
+      final line = lines[i].trim();
+      if (line.isEmpty) continue;
 
-          final decibels = double.tryParse(cols[2].trim()) ?? 0.0;
-          if (decibels > maxDb) maxDb = decibels;
-          sum += decibels;
-          totalRecords++;
-        });
+      final cols = line.split(',');
+      if (cols.length < 3) continue;
 
-    averageDb = totalRecords > 0 ? sum / totalRecords : 0.0;
+      final decibels = double.tryParse(cols[2].trim()) ?? 0.0;
+      if (decibels > maxDb) maxDb = decibels;
+      sum += decibels;
+      totalRecords++;
+    }
+
+    final averageDb = totalRecords > 0 ? sum / totalRecords : 0.0;
 
     return Statistics(
       totalRecords: totalRecords,

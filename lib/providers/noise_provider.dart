@@ -22,23 +22,27 @@ class NoiseProvider {
       await Permission.microphone.request();
     }
 
-    if (!await Permission.microphone.isGranted) return;
+    if (!await Permission.microphone.isGranted) {
+      _log.warning("Microphone permission not granted — noise tracking disabled");
+      return;
+    }
 
     try {
       _noiseMeter = NoiseMeter();
       _subscription = _noiseMeter!.noise.listen(
         (reading) {
           double db = reading.meanDecibel;
-          if (db < 0) db = 0;
+          if (db.isNaN || db.isInfinite || db < 0) db = 0;
           _lastDecibels = db;
           _controller.add(db);
         },
         onError: (error) {
-          _log.severe("Fallo en la comunicación con el micrófono: $error");
+          _log.severe("Microphone stream error: $error");
         },
       );
+      _log.info("Noise sensor activated");
     } catch (e) {
-      _log.severe("Excepción al activar sensor de ruido: $e");
+      _log.severe("Exception while activating noise sensor: $e");
     }
   }
 

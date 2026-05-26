@@ -32,7 +32,10 @@ class ZepaService {
     const timeout = Duration(seconds: 15);
     final delays = [Duration(seconds: 2), Duration(seconds: 5)];
 
-    for (var attempt = 1; attempt <= maxAttempts; attempt++) {
+    List<Zepa>? result;
+    Object? lastError;
+
+    for (var attempt = 1; attempt <= maxAttempts && result == null; attempt++) {
       try {
         final response = await http.get(url).timeout(timeout);
         final Map<String, dynamic> body = json.decode(response.body);
@@ -45,22 +48,23 @@ class ZepaService {
           throw Exception(body['message']);
         }
 
-        final zepas = (body['data'] as List)
+        result = (body['data'] as List)
             .map((item) => Zepa.fromJson(item))
             .toList();
 
-        _log.info("Success: ${zepas.length} zones loaded (attempt $attempt).");
-        return zepas;
+        _log.info("Success: ${result.length} zones loaded (attempt $attempt).");
       } catch (e) {
+        lastError = e;
         _log.warning("ZEPA request failed (attempt $attempt/$maxAttempts): $e");
-        if (attempt == maxAttempts) {
-          _log.severe("ZEPA request abandoned after $maxAttempts attempts.");
-          rethrow;
+        if (attempt < maxAttempts) {
+          await Future.delayed(delays[attempt - 1]);
         }
-        await Future.delayed(delays[attempt - 1]);
       }
     }
 
-    throw StateError('unreachable');
+    if (result != null) return result;
+
+    _log.severe("ZEPA request abandoned after $maxAttempts attempts.");
+    throw lastError ?? StateError('Max retries exceeded');
   }
 }

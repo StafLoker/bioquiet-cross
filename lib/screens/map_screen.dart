@@ -1,7 +1,7 @@
 import 'dart:async';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:logging/logging.dart';
@@ -27,13 +27,12 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
   StreamSubscription<Position>? _positionSubscription;
   StreamSubscription<double>? _noiseSubscription;
   StreamSubscription<ZepaState>? _zepaSubscription;
+  final List<AnimationController> _mapAnimations = [];
 
-  LatLng _userLatLng = const LatLng(40.4167, -3.7033);
-  bool _isFirstFixDone = false;
+  LatLng? _userLatLng;
   Timer? _moveDebounce;
   bool _isWarningActive = false;
 
-  // Estado derivado del ZepaProvider para rebuild de UI
   List<Zepa> _loadedZepas = [];
   Zepa? _currentlyInsideZepa;
   bool _isApiLoading = false;
@@ -53,6 +52,10 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
     _noiseProvider.dispose();
     _zepaProvider.dispose();
     _moveDebounce?.cancel();
+    for (final controller in _mapAnimations) {
+      controller.dispose();
+    }
+    _mapAnimations.clear();
     _mapController.dispose();
     super.dispose();
   }
@@ -69,11 +72,8 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
 
     _zepaProvider.startPersistenceLoop(() => _lastDecibelReading);
     _initLocationTracking();
-    // unawaited: el Future se gestiona internamente con guardas de mounted
     unawaited(_initNoiseTracking());
   }
-
-  // --- ANIMACIÓN DE MAPA ---
 
   void _animatedMapMove(LatLng destLocation, double destZoom) {
     final latTween = Tween<double>(
@@ -93,6 +93,8 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
       duration: const Duration(milliseconds: 500),
       vsync: this,
     );
+    _mapAnimations.add(controller);
+
     final animation = CurvedAnimation(
       parent: controller,
       curve: Curves.fastOutSlowIn,
@@ -108,14 +110,13 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
     animation.addStatusListener((status) {
       if (status == AnimationStatus.completed ||
           status == AnimationStatus.dismissed) {
+        _mapAnimations.remove(controller);
         controller.dispose();
       }
     });
 
     controller.forward();
   }
-
-  // --- RUIDO ---
 
   Future<void> _initNoiseTracking() async {
     await _noiseProvider.init();
@@ -157,41 +158,47 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
     );
   }
 
-  // --- LOCALIZACIÓN ---
-
   void _initLocationTracking() {
     _positionSubscription = _locationProvider.positionStream.listen(
       (pos) => _onNewPositionAvailable(pos),
-      onError: (err) => log.severe("Error de sensor GPS: $err"),
+      onError: (err) {
+        log.severe("GPS sensor error: $err");
+        if (_userLatLng == null) {
+          Fluttertoast.showToast(
+            msg: "Location unavailable. Enable GPS and grant permissions.",
+            toastLength: Toast.LENGTH_LONG,
+            gravity: ToastGravity.BOTTOM,
+            backgroundColor: Colors.black87,
+            textColor: Colors.white,
+          );
+        }
+      },
     );
   }
 
   void _onNewPositionAvailable(Position pos) {
     final newPos = LatLng(pos.latitude, pos.longitude);
+    final isFirstFix = _userLatLng == null;
     setState(() => _userLatLng = newPos);
 
-    if (!_isFirstFixDone) {
-      _isFirstFixDone = true;
-      _mapController.move(newPos, 15.0);
+    if (isFirstFix) {
       _fetchVisibleZones();
     } else {
+      _animatedMapMove(newPos, _mapController.camera.zoom);
       _zepaProvider.evaluatePosition(newPos);
     }
   }
 
-  // --- ZONAS ---
-
   Future<void> _fetchVisibleZones() async {
     if (!mounted) return;
+    final pos = _userLatLng;
+    if (pos == null) return;
     final b = _mapController.camera.visibleBounds;
     await _zepaProvider.fetchZones(b.west, b.south, b.east, b.north);
-    if (mounted) _zepaProvider.evaluatePosition(_userLatLng);
+    if (mounted) _zepaProvider.evaluatePosition(pos);
   }
 
-  // --- UI ---
-
   Color _getIndicatorStatusColor() {
-    if (_currentlyInsideZepa == null) return Colors.grey.withAlpha(160);
     final t = _currentlyInsideZepa!.noiseThresholds;
     if (_lastDecibelReading >= t.dbWarning) return Colors.red;
     if (_lastDecibelReading >= t.dbSafe) return Colors.orange;
@@ -200,13 +207,29 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
+    final userPos = _userLatLng;
+    if (userPos == null) {
+      return const Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CircularProgressIndicator(color: Colors.green),
+              SizedBox(height: 16),
+              Text("Waiting for GPS coordinates..."),
+            ],
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       body: Stack(
         children: [
           FlutterMap(
             mapController: _mapController,
             options: MapOptions(
-              initialCenter: _userLatLng,
+              initialCenter: userPos,
               initialZoom: 15.0,
               onMapEvent: (event) {
                 if (event is MapEventMoveEnd) {
@@ -225,6 +248,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
               ),
               PolygonLayer(
                 polygons: _loadedZepas.expand((zepa) {
+                  if (zepa.geometry.type != 'Polygon') return <Polygon>[];
                   final ring = (zepa.geometry.coordinates as List)[0] as List;
                   return [
                     Polygon(
@@ -242,7 +266,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
               MarkerLayer(
                 markers: [
                   Marker(
-                    point: _userLatLng,
+                    point: userPos,
                     width: 40,
                     height: 40,
                     child: const Icon(
@@ -256,7 +280,6 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
             ],
           ),
 
-          // Indicador de red
           Positioned(
             top: 50,
             left: 20,
@@ -292,8 +315,8 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
             ),
           ),
 
-          // Monitor acústico
-          Positioned(
+          if (_currentlyInsideZepa != null)
+            Positioned(
             top: 50,
             left: 0,
             right: 0,
@@ -322,7 +345,6 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
             ),
           ),
 
-          // Botones de zoom
           Positioned(
             bottom: 30,
             left: 0,
@@ -341,8 +363,12 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
       floatingActionButton: FloatingActionButton(
         backgroundColor: Colors.white,
         onPressed: () async {
-          final p = await _locationProvider.getCurrentLocation();
-          _animatedMapMove(LatLng(p.latitude, p.longitude), 15.0);
+          try {
+            final p = await _locationProvider.getCurrentLocation();
+            _animatedMapMove(LatLng(p.latitude, p.longitude), 15.0);
+          } catch (e) {
+            log.warning("Could not retrieve current location: $e");
+          }
         },
         child: const Icon(Icons.my_location, color: Colors.blue),
       ),

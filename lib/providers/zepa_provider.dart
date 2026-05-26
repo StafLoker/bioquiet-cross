@@ -65,7 +65,7 @@ class ZepaProvider {
     try {
       _zones = await _zepaService.fetchNearbyZepas(west, south, east, north);
     } catch (e) {
-      _log.severe("Fallo crítico al actualizar zonas: $e");
+      _log.severe("Critical failure while updating zones: $e");
     } finally {
       _isLoading = false;
       _controller.add(
@@ -89,12 +89,12 @@ class ZepaProvider {
       }
     }
 
-    if (detected != _currentZone) {
+    if (detected?.id != _currentZone?.id) {
       _currentZone = detected;
       if (detected != null) {
-        _log.info("Entrada en zona: ${detected.name}");
+        _log.info("Entered zone: ${detected.name}");
       } else {
-        _log.info("El dispositivo ya no se encuentra en una ZEPA.");
+        _log.info("Device is no longer inside a ZEPA zone.");
       }
       _controller.add(
         ZepaState(

@@ -5,7 +5,7 @@ class LocationProvider {
   static final Logger log = Logger("LocationProvider");
   static final LocationSettings _settings = LocationSettings(
     accuracy: LocationAccuracy.high,
-    distanceFilter: 5,
+    distanceFilter: 10,
   );
 
   Future<void> _checkPermissions() async {

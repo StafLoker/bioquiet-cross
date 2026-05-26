@@ -42,6 +42,7 @@ dependencies:
   latlong2: ^0.9.1
   noise_meter: ^5.0.0
   permission_handler: ^11.3.1
+  fluttertoast: ^9.1.0
 
 dev_dependencies:
   flutter_test:
