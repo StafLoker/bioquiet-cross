@@ -43,7 +43,9 @@ class LocationProvider {
   Future<Position> getCurrentLocation() async {
     await _checkPermissions();
 
-    final position = await Geolocator.getCurrentPosition(locationSettings: _settings);
+    final position = await Geolocator.getCurrentPosition(
+      locationSettings: _settings,
+    );
     log.fine(
       "Position retrieved | LAT=${position.latitude} | LON=${position.longitude}",
     );

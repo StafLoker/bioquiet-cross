@@ -18,9 +18,15 @@ class StatisticsCard extends StatelessWidget {
           children: [
             _buildStatItem("Total registros", "${stats.totalRecords}"),
             const Divider(height: 30),
-            _buildStatItem("Ruido máximo", "${stats.maxDb.toStringAsFixed(2)} dB"),
+            _buildStatItem(
+              "Ruido máximo",
+              "${stats.maxDb.toStringAsFixed(2)} dB",
+            ),
             const Divider(height: 30),
-            _buildStatItem("Ruido promedio", "${stats.averageDb.toStringAsFixed(2)} dB"),
+            _buildStatItem(
+              "Ruido promedio",
+              "${stats.averageDb.toStringAsFixed(2)} dB",
+            ),
             const Divider(height: 40),
             Center(
               child: Text(
@@ -39,10 +45,7 @@ class StatisticsCard extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: const TextStyle(color: Colors.grey, fontSize: 14),
-        ),
+        Text(label, style: const TextStyle(color: Colors.grey, fontSize: 14)),
         const SizedBox(height: 5),
         Text(
           value,

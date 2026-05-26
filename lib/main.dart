@@ -6,7 +6,9 @@ import 'package:logging/logging.dart';
 void main() {
   Logger.root.level = Level.ALL;
   Logger.root.onRecord.listen((record) {
-    debugPrint('${record.level.name} | ${record.loggerName} | ${record.time} | ${record.message}');
+    debugPrint(
+      '${record.level.name} | ${record.loggerName} | ${record.time} | ${record.message}',
+    );
   });
 
   runApp(const BioQuietApp());
@@ -38,17 +40,15 @@ class MainNavigationScreen extends StatefulWidget {
 
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
   int _currentTabIndex = 0;
-  final GlobalKey<AccountScreenState> _accountKey = GlobalKey<AccountScreenState>();
-  
+  final GlobalKey<AccountScreenState> _accountKey =
+      GlobalKey<AccountScreenState>();
+
   late final List<Widget> _appScreens;
 
   @override
   void initState() {
     super.initState();
-    _appScreens = [
-      const MapScreen(),
-      AccountScreen(key: _accountKey)
-    ];
+    _appScreens = [const MapScreen(), AccountScreen(key: _accountKey)];
   }
 
   void _onTabChanged(int index) {
@@ -65,10 +65,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: IndexedStack(
-        index: _currentTabIndex,
-        children: _appScreens,
-      ),
+      body: IndexedStack(index: _currentTabIndex, children: _appScreens),
       bottomNavigationBar: BottomNavigationBar(
         items: const [
           BottomNavigationBarItem(

@@ -1,22 +1,23 @@
 import 'dart:convert';
+
 import 'package:http/http.dart' as http;
 import 'package:logging/logging.dart';
+
 import '../models/zepa.dart';
 
 class ZepaService {
-  static final _logger = Logger("ZepaService");
-  
-  // IP del host local para acceso desde el emulador de Android
-  static const String _apiBaseUrl = "http://10.0.2.2:5000";
+  static const String apiBaseUrl =
+      "https://bioquiet-backend-production.up.railway.app";
 
-  // Obtiene el listado de zonas ZEPA presentes en el área geográfica visible.
+  static final Logger _log = Logger("ZepaService");
+
   Future<List<Zepa>> fetchNearbyZepas(
     double lonWest,
     double latSouth,
     double lonEast,
     double latNorth,
   ) async {
-    final url = Uri.parse("$_apiBaseUrl/api/v1/zones/zepa").replace(
+    final url = Uri.parse("$apiBaseUrl/api/v1/zones/zepa").replace(
       queryParameters: {
         'lonWest': lonWest.toString(),
         'latSouth': latSouth.toString(),
@@ -25,31 +26,41 @@ class ZepaService {
       },
     );
 
-    _logger.info("Solicitando datos a la API: $url");
+    _log.fine("Requesting data from API: $url");
 
-    try {
-      final response = await http.get(url).timeout(const Duration(seconds: 15));
+    const maxAttempts = 3;
+    const timeout = Duration(seconds: 15);
+    final delays = [Duration(seconds: 2), Duration(seconds: 5)];
 
-      if (response.statusCode == 200) {
+    for (var attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        final response = await http.get(url).timeout(timeout);
         final Map<String, dynamic> body = json.decode(response.body);
 
-        if (body['status'] == 'success') {
-          final List<dynamic> data = body['data'];
-          final List<Zepa> zepas = data.map((item) => Zepa.fromJson(item)).toList();
+        if (response.statusCode != 200) {
+          throw Exception("Server error (${response.statusCode})");
+        }
 
-          _logger.info("Operación exitosa: ${zepas.length} zonas cargadas.");
-          return zepas;
-        } else {
-          _logger.warning("Error de negocio en la API: ${body['message']}");
+        if (body['status'] != 'success') {
           throw Exception(body['message']);
         }
-      } else {
-        _logger.severe("Fallo de conexión. Código: ${response.statusCode}");
-        throw Exception("Error de servidor (${response.statusCode})");
+
+        final zepas = (body['data'] as List)
+            .map((item) => Zepa.fromJson(item))
+            .toList();
+
+        _log.info("Success: ${zepas.length} zones loaded (attempt $attempt).");
+        return zepas;
+      } catch (e) {
+        _log.warning("ZEPA request failed (attempt $attempt/$maxAttempts): $e");
+        if (attempt == maxAttempts) {
+          _log.severe("ZEPA request abandoned after $maxAttempts attempts.");
+          rethrow;
+        }
+        await Future.delayed(delays[attempt - 1]);
       }
-    } catch (e) {
-      _logger.severe("Error durante la petición ZEPA: $e");
-      rethrow;
     }
+
+    throw StateError('unreachable');
   }
 }

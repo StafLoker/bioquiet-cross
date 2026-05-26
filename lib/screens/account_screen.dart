@@ -12,25 +12,24 @@ class AccountScreen extends StatefulWidget {
 }
 
 class AccountScreenState extends State<AccountScreen> {
-  final _logger = Logger('AccountScreen');
+  final _log = Logger('AccountScreen');
   final _statsService = StatisticsService();
-  
+
   Statistics? _userStatistics;
   bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    loadUserStatistics();
+    WidgetsBinding.instance.addPostFrameCallback((_) => loadUserStatistics());
   }
 
-  // Carga las estadísticas reales procesando el archivo CSV local.
   Future<void> loadUserStatistics() async {
     if (!mounted) return;
     setState(() => _isLoading = true);
-    
+
     try {
-      final stats = await _statsService.calculateGlobalStatistics();
+      final stats = await _statsService.getStatistics();
       if (mounted) {
         setState(() {
           _userStatistics = stats;
@@ -38,7 +37,7 @@ class AccountScreenState extends State<AccountScreen> {
         });
       }
     } catch (e) {
-      _logger.severe("Error al cargar las estadísticas del usuario: $e");
+      _log.severe("Error loading user statistics: $e");
       if (mounted) setState(() => _isLoading = false);
     }
   }
@@ -62,14 +61,14 @@ class AccountScreenState extends State<AccountScreen> {
 
               _buildSectionTitle("ESTADÍSTICAS EN TIEMPO REAL"),
               const SizedBox(height: 15),
-              
+
               if (_isLoading)
                 const Center(child: CircularProgressIndicator())
               else if (_userStatistics != null)
                 StatisticsCard(stats: _userStatistics!)
               else
                 const Center(child: Text("No se pudieron cargar los datos.")),
-              
+
               const SizedBox(height: 20),
             ],
           ),
@@ -102,9 +101,15 @@ class AccountScreenState extends State<AccountScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text("Usuario", style: TextStyle(color: Colors.grey, fontSize: 14)),
+            const Text(
+              "Usuario",
+              style: TextStyle(color: Colors.grey, fontSize: 14),
+            ),
             const SizedBox(height: 4),
-            const Text("Sesión no iniciada", style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+            const Text(
+              "Sesión no iniciada",
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+            ),
             const Divider(height: 32),
             SizedBox(
               width: double.infinity,
@@ -117,9 +122,14 @@ class AccountScreenState extends State<AccountScreen> {
                   foregroundColor: Colors.white,
                   elevation: 0,
                   padding: const EdgeInsets.symmetric(vertical: 12),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
-                child: const Text("Entrar / Crear cuenta", style: TextStyle(fontWeight: FontWeight.bold)),
+                child: const Text(
+                  "Entrar / Crear cuenta",
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
               ),
             ),
           ],

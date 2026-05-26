@@ -108,12 +108,7 @@ class Management {
   final String? planUrl;
   final String? measures;
 
-  Management({
-    this.orgName,
-    this.orgEmail,
-    this.planUrl,
-    this.measures,
-  });
+  Management({this.orgName, this.orgEmail, this.planUrl, this.measures});
 
   factory Management.fromJson(Map<String, dynamic> json) {
     return Management(
@@ -180,19 +175,21 @@ class Zepa {
       spaLegalRef: json['spaLegalRef'],
       description: json['description'],
       quality: json['quality'],
-      habitats: (json['habitats'] as List?)
+      habitats:
+          (json['habitats'] as List?)
               ?.map((e) => Habitat.fromJson(e))
               .toList() ??
           [],
-      species: (json['species'] as List?)
+      species:
+          (json['species'] as List?)
               ?.map((e) => Species.fromJson(e))
               .toList() ??
           [],
-      impacts: (json['impacts'] as List?)
-              ?.map((e) => Impact.fromJson(e))
-              .toList() ??
+      impacts:
+          (json['impacts'] as List?)?.map((e) => Impact.fromJson(e)).toList() ??
           [],
-      management: (json['management'] as List?)
+      management:
+          (json['management'] as List?)
               ?.map((e) => Management.fromJson(e))
               .toList() ??
           [],

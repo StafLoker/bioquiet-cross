@@ -1,4 +1,4 @@
-
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:logging/logging.dart';
@@ -8,92 +8,74 @@ import '../models/statistics.dart';
 import '../models/zepa.dart';
 
 class StatisticsService {
-  static const String _filename = "statistic.csv";
-  static const String _csvHeader = "date,zepa_id,decibels\n";
-  static const double _highNoiseThreshold = 60.0;
+  static final String filename = "statistic.csv";
+  static final String csvHeader = "date,zepa_id,decibels\n";
+  static final double warningArgDb = 60.0;
 
-  static final _logger = Logger("StatisticService");
+  static final Logger log = Logger("StatisticService");
 
-  // Registra una nueva entrada de ruido asociada a una zona protegida.
-  Future<void> saveNoiseRecord(Zepa zepa, double decibels) async {
-    try {
-      final directory = await getApplicationDocumentsDirectory();
-      final file = File('${directory.path}/$_filename');
-      final String timestamp = DateTime.now().millisecondsSinceEpoch.toString();
+  Future<void> addRecord(Zepa zepa, double decibels) async {
+    log.fine("Add record | ZEPA ID=${zepa.id} | Decibels=${decibels}db");
 
-      if (!await file.exists()) {
-        await file.writeAsString(_csvHeader, mode: FileMode.write);
-      }
+    final directory = await getApplicationDocumentsDirectory();
+    final file = File('${directory.path}/${filename}');
+    String timestamp = DateTime.now().millisecondsSinceEpoch.toString();
 
-      await file.writeAsString(
-        '$timestamp,${zepa.id},$decibels\n',
-        mode: FileMode.append,
-      );
-    } catch (e) {
-      _logger.severe("Error al persistir el registro de ruido: $e");
+    if (!await file.exists()) {
+      await file.writeAsString(csvHeader, mode: FileMode.write);
     }
+
+    await file.writeAsString(
+      '$timestamp,${zepa.id},$decibels',
+      mode: FileMode.append,
+    );
   }
 
-  // Recupera y procesa todos los registros para generar el resumen estadístico.
-  Future<Statistics> calculateGlobalStatistics() async {
-    int totalEntries = 0;
-    double maxNoise = 0;
-    double noiseSum = 0;
+  Future<Statistics> getStatistics() async {
+    log.fine("Retrieved current statistics");
 
-    try {
-      final directory = await getApplicationDocumentsDirectory();
-      final file = File('${directory.path}/$_filename');
+    int totalRecords = 0;
+    double averageDb = 0, maxDb = 0, sum = 0;
+    final directory = await getApplicationDocumentsDirectory();
+    final file = File('${directory.path}/$filename');
 
-      if (!await file.exists()) {
-        return Statistics(
-          totalRecords: 0, 
-          maxDb: 0, 
-          averageDb: 0, 
-          feedback: "No hay actividad registrada."
-        );
-      }
-
-      final lines = await file.readAsLines();
-      if (lines.length <= 1) {
-        return Statistics(
-          totalRecords: 0, 
-          maxDb: 0, 
-          averageDb: 0, 
-          feedback: "Inicia un recorrido para ver tus datos."
-        );
-      }
-
-      for (var i = 1; i < lines.length; i++) {
-        final line = lines[i];
-        if (line.trim().isEmpty) continue;
-
-        final parts = line.split(',');
-        if (parts.length < 3) continue;
-
-        final db = double.tryParse(parts[2].trim()) ?? 0.0;
-        if (db > maxNoise) maxNoise = db;
-        noiseSum += db;
-        totalEntries++;
-      }
-
-      final avgNoise = totalEntries > 0 ? noiseSum / totalEntries : 0.0;
-
+    if (!await file.exists()) {
+      log.warning("Statistics file not found");
       return Statistics(
-        totalRecords: totalEntries,
-        maxDb: maxNoise,
-        averageDb: avgNoise,
-        feedback: avgNoise > _highNoiseThreshold
-            ? "¡Cuidado! Tu impacto acústico promedio es elevado."
-            : "¡Genial! Mantienes un perfil sonoro respetuoso.",
-      );
-    } catch (e) {
-      _logger.severe("Fallo al procesar estadísticas: $e");
-      return Statistics(
-        totalRecords: 0, 
-        maxDb: 0, 
-        averageDb: 0, 
-        feedback: "Error al cargar los datos."
+        totalRecords: 0,
+        maxDb: 0,
+        averageDb: 0,
+        feedback: "Sin registros",
       );
     }
+
+    await file
+        .openRead()
+        .transform(utf8.decoder)
+        .transform(LineSplitter())
+        .skip(1)
+        .forEach((line) {
+          if (line.trim().isEmpty) return;
+
+          final cols = line.split(',');
+
+          if (cols.length < 3) return;
+
+          final decibels = double.tryParse(cols[2].trim()) ?? 0.0;
+          if (decibels > maxDb) maxDb = decibels;
+          sum += decibels;
+          totalRecords++;
+        });
+
+    averageDb = totalRecords > 0 ? sum / totalRecords : 0.0;
+
+    return Statistics(
+      totalRecords: totalRecords,
+      maxDb: maxDb,
+      averageDb: averageDb,
+      feedback: averageDb > warningArgDb
+          ? "¡Advertencia! Nivel de ruido promedio alto."
+          : "¡Buen trabajo manteniéndolo silencioso!",
+    );
   }
 }
