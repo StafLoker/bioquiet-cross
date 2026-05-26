@@ -255,9 +255,9 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
                       points: ring
                           .map((v) => LatLng(v[1].toDouble(), v[0].toDouble()))
                           .toList(),
-                      color: Colors.green.withAlpha(65),
-                      borderColor: Colors.green,
-                      borderStrokeWidth: 1.0,
+                      color: const Color(0xFF2E7D32).withAlpha(130),
+                      borderColor: const Color(0xFF1B5E20),
+                      borderStrokeWidth: 2.0,
                       isFilled: true,
                     ),
                   ];
