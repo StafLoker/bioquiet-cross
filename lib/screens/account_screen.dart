@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:logging/logging.dart';
+import 'package:provider/provider.dart';
 import '../models/statistics.dart';
+import '../providers/auth_provider.dart';
 import '../services/statistics_service.dart';
 import '../widgets/statistics_card.dart';
+import 'login_screen.dart';
 
 class AccountScreen extends StatefulWidget {
   const AccountScreen({super.key});
@@ -55,7 +58,7 @@ class AccountScreenState extends State<AccountScreen> {
               const SizedBox(height: 10),
               _buildSectionTitle("CUENTA"),
               const SizedBox(height: 15),
-              _buildUserLoginCard(),
+              _buildUserCard(),
 
               const SizedBox(height: 35),
 
@@ -89,7 +92,67 @@ class AccountScreenState extends State<AccountScreen> {
     );
   }
 
-  Widget _buildUserLoginCard() {
+  Widget _buildUserCard() {
+    return Consumer<AuthProvider>(
+      builder: (context, auth, _) {
+        if (auth.isLoggedIn) {
+          return _buildLoggedInCard(auth);
+        }
+        return _buildLoggedOutCard();
+      },
+    );
+  }
+
+  Widget _buildLoggedInCard(AuthProvider auth) {
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: Colors.grey.shade200),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              "Usuario",
+              style: TextStyle(color: Colors.grey, fontSize: 14),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              auth.user!.email ?? 'Sin email',
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+            ),
+            const Divider(height: 32),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton(
+                onPressed: () async {
+                  final confirmed = await _showLogoutDialog();
+                  if (confirmed && mounted) auth.signOut();
+                },
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.red,
+                  side: const BorderSide(color: Colors.red),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: const Text(
+                  "Cerrar sesión",
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLoggedOutCard() {
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
@@ -114,9 +177,10 @@ class AccountScreenState extends State<AccountScreen> {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: () {
-                  // Implementar lógica de autenticación
-                },
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const LoginScreen()),
+                ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.deepPurple,
                   foregroundColor: Colors.white,
@@ -136,5 +200,27 @@ class AccountScreenState extends State<AccountScreen> {
         ),
       ),
     );
+  }
+
+  Future<bool> _showLogoutDialog() async {
+    return await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text('Cerrar sesión'),
+            content: const Text('¿Seguro que quieres cerrar sesión?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('Cancelar'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                style: TextButton.styleFrom(foregroundColor: Colors.red),
+                child: const Text('Cerrar sesión'),
+              ),
+            ],
+          ),
+        ) ??
+        false;
   }
 }

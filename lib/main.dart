@@ -1,9 +1,17 @@
+import 'package:bioquiet_cross/providers/auth_provider.dart';
 import 'package:bioquiet_cross/screens/account_screen.dart';
 import 'package:bioquiet_cross/screens/map_screen.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:logging/logging.dart';
+import 'package:provider/provider.dart';
+import 'firebase_options.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
   Logger.root.level = Level.ALL;
   Logger.root.onRecord.listen((record) {
     debugPrint(
@@ -11,7 +19,12 @@ void main() {
     );
   });
 
-  runApp(const BioQuietApp());
+  runApp(
+    ChangeNotifierProvider(
+      create: (_) => AuthProvider(),
+      child: const BioQuietApp(),
+    ),
+  );
 }
 
 class BioQuietApp extends StatelessWidget {
