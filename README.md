@@ -17,7 +17,7 @@
 
    <p>Aplicación Multiplataforma (desarrollada con Flutter) para monitorizar el nivel de ruido en Zonas de Especial Protección para las Aves (ZEPA). Avisa al usuario cuando supera los umbrales de ruido permitidos para proteger la fauna local.</p>
 
-   <img src="assets/screenshot_1.jpeg" height="500" alt="Screenshot Principal" />
+   <img src="assets/screenshot_01.jpeg" height="500" alt="Screenshot Principal" />
 </div>
 
 ---
