@@ -3,14 +3,21 @@
    <h1><b>BioQuiet Cross</b></h1>
    <p><i>~ Protege la naturaleza, controla tu ruido ~</i></p>
    <p>
-      <a href="https://github.com/StafLoker/bioquiet-backend">Backend</a>
+      <a href="https://github.com/StafLoker/bioquiet-backend">Backend</a> ·
+      <a href="https://github.com/StafLoker/bioquiet-cross/releases">Releases</a>
    </p>
 </div>
 
 <div align="center">
+  <p>
+      <a href="https://github.com/StafLoker/bioquiet-cross/releases/latest/download/bioquiet.apk"><img src="https://img.shields.io/badge/Download-APK-green?style=for-the-badge&logo=android" alt="Download APK" /></a>
+   </p>
+   <a href="https://github.com/StafLoker/bioquiet-cross/releases"><img src="https://img.shields.io/github/v/release/StafLoker/bioquiet-cross?style=flat" alt="latest version" /></a>
+   <a href="https://github.com/StafLoker/bioquiet-cross/actions/workflows/release.yml"><img src="https://github.com/StafLoker/bioquiet-cross/actions/workflows/release.yml/badge.svg" alt="Release" /></a>
+
    <p>Aplicación Multiplataforma (desarrollada con Flutter) para monitorizar el nivel de ruido en Zonas de Especial Protección para las Aves (ZEPA). Avisa al usuario cuando supera los umbrales de ruido permitidos para proteger la fauna local.</p>
 
-   <img src="assets/screenshot_01.jpeg" height="500" alt="Screenshot Principal" />
+   <img src="assets/screenshot_1.jpeg" height="500" alt="Screenshot Principal" />
 </div>
 
 ---
@@ -70,7 +77,7 @@ _AVISO: Es necesario tener conexión a internet para cargar el mapa y consultar 
 
 # Demo Video
 
-No available
+https://github.com/user-attachments/assets/231ba81e-7861-4da7-9a57-72f1d2612358
 
 ---
 
