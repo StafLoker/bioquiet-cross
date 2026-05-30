@@ -5,10 +5,13 @@ import 'package:fluttertoast/fluttertoast.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:logging/logging.dart';
+import 'package:provider/provider.dart';
 import '../providers/location_provider.dart';
 import '../providers/noise_provider.dart';
 import '../providers/zepa_provider.dart';
+import '../providers/auth_provider.dart';
 import '../models/zepa.dart';
+import '../services/zepa_user_service.dart';
 
 class MapScreen extends StatefulWidget {
   const MapScreen({super.key});
@@ -23,10 +26,12 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
   final LocationProvider _locationProvider = LocationProvider();
   final NoiseProvider _noiseProvider = NoiseProvider();
   final ZepaProvider _zepaProvider = ZepaProvider();
+  final ZepaUserService _zepaUserService = ZepaUserService();
 
   StreamSubscription<Position>? _positionSubscription;
   StreamSubscription<double>? _noiseSubscription;
   StreamSubscription<ZepaState>? _zepaSubscription;
+  StreamSubscription<int>? _userCountSubscription;
   final List<AnimationController> _mapAnimations = [];
 
   LatLng? _userLatLng;
@@ -37,6 +42,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
   Zepa? _currentlyInsideZepa;
   bool _isApiLoading = false;
   double _lastDecibelReading = 0.0;
+  int _usersInZone = 0;
 
   @override
   void initState() {
@@ -49,9 +55,16 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
     _positionSubscription?.cancel();
     _noiseSubscription?.cancel();
     _zepaSubscription?.cancel();
+    _userCountSubscription?.cancel();
     _noiseProvider.dispose();
     _zepaProvider.dispose();
     _moveDebounce?.cancel();
+
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    if (_currentlyInsideZepa != null && auth.isLoggedIn) {
+      _zepaUserService.removeUserPresence(_currentlyInsideZepa!.id, auth.user!.uid);
+    }
+
     for (final controller in _mapAnimations) {
       controller.dispose();
     }
@@ -63,6 +76,11 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
   void _setupLifecycle() {
     _zepaSubscription = _zepaProvider.stateStream.listen((state) {
       if (!mounted) return;
+      
+      if (state.currentZone?.id != _currentlyInsideZepa?.id) {
+        _handleZepaPresence(state.currentZone);
+      }
+
       setState(() {
         _loadedZepas = state.zones;
         _isApiLoading = state.isLoading;
@@ -73,6 +91,35 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
     _zepaProvider.startPersistenceLoop(() => _lastDecibelReading);
     _initLocationTracking();
     unawaited(_initNoiseTracking());
+  }
+
+  Future<void> _handleZepaPresence(Zepa? newZone) async {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    if (!auth.isLoggedIn) return;
+
+    final String userId = auth.user!.uid;
+
+    // Limpieza de zona anterior
+    if (_currentlyInsideZepa != null) {
+      await _zepaUserService.removeUserPresence(_currentlyInsideZepa!.id, userId);
+      await _userCountSubscription?.cancel();
+      _userCountSubscription = null;
+    }
+
+    // Reseteo inmediato del contador visual
+    if (mounted) setState(() => _usersInZone = 0);
+
+    // Registro en nueva zona
+    if (newZone != null) {
+      await _zepaUserService.registerUserPresence(newZone.id, userId);
+      
+      // Escuchamos el nodo completo de la ZEPA para actualizaciones reales
+      _userCountSubscription = _zepaUserService.watchUserCount(newZone.id).listen((count) {
+        if (mounted) {
+          setState(() => _usersInZone = count);
+        }
+      });
+    }
   }
 
   void _animatedMapMove(LatLng destLocation, double destZoom) {
@@ -182,9 +229,13 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
     setState(() => _userLatLng = newPos);
 
     if (isFirstFix) {
+      _mapController.move(newPos, 15.0);
       _fetchVisibleZones();
     } else {
       _animatedMapMove(newPos, _mapController.camera.zoom);
+      _moveDebounce?.cancel();
+      _moveDebounce = Timer(const Duration(milliseconds: 600), _fetchVisibleZones);
+      
       _zepaProvider.evaluatePosition(newPos);
     }
   }
@@ -193,12 +244,15 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
     if (!mounted) return;
     final pos = _userLatLng;
     if (pos == null) return;
+    
     final b = _mapController.camera.visibleBounds;
     await _zepaProvider.fetchZones(b.west, b.south, b.east, b.north);
+    
     if (mounted) _zepaProvider.evaluatePosition(pos);
   }
 
   Color _getIndicatorStatusColor() {
+    if (_currentlyInsideZepa == null) return Colors.grey;
     final t = _currentlyInsideZepa!.noiseThresholds;
     if (_lastDecibelReading >= t.dbWarning) return Colors.red;
     if (_lastDecibelReading >= t.dbSafe) return Colors.orange;
@@ -207,7 +261,9 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
+    final auth = Provider.of<AuthProvider>(context);
     final userPos = _userLatLng;
+    
     if (userPos == null) {
       return const Scaffold(
         body: Center(
@@ -280,6 +336,7 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
             ],
           ),
 
+          // Indicador de estado de API (Arriba Izquierda)
           Positioned(
             top: 50,
             left: 20,
@@ -315,35 +372,69 @@ class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
             ),
           ),
 
+          // Monitor de ruido y pill de usuarios
           if (_currentlyInsideZepa != null)
             Positioned(
-            top: 50,
-            left: 0,
-            right: 0,
-            child: Center(
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 25,
-                  vertical: 10,
-                ),
-                decoration: BoxDecoration(
-                  color: _getIndicatorStatusColor(),
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
-                    BoxShadow(color: Colors.black.withAlpha(30), blurRadius: 8),
-                  ],
-                ),
-                child: Text(
-                  "${_lastDecibelReading.toInt()} dB",
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 18,
+              top: 50,
+              left: 0,
+              right: 0,
+              child: Column(
+                children: [
+                  Center(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 25,
+                        vertical: 10,
+                      ),
+                      decoration: BoxDecoration(
+                        color: _getIndicatorStatusColor(),
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(color: Colors.black.withAlpha(30), blurRadius: 8),
+                        ],
+                      ),
+                      child: Text(
+                        "${_lastDecibelReading.toInt()} dB",
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 18,
+                        ),
+                      ),
+                    ),
                   ),
-                ),
+                  if (auth.isLoggedIn)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8.0),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withAlpha(240),
+                          borderRadius: BorderRadius.circular(15),
+                          boxShadow: [
+                            BoxShadow(color: Colors.black.withAlpha(10), blurRadius: 4),
+                          ],
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.people_outline, size: 18, color: Colors.blueGrey),
+                            const SizedBox(width: 8),
+                            Text(
+                              "Users in zone: $_usersInZone",
+                              style: const TextStyle(
+                                fontSize: 14, 
+                                fontWeight: FontWeight.bold,
+                                color: Colors.blueGrey
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                ],
               ),
             ),
-          ),
 
           Positioned(
             bottom: 30,
