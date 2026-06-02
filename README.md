@@ -24,18 +24,14 @@
 
 # Features
 
-- **[NUEVO]** Inicio de sesión/Registro con Firebase Authentication (Email y Google).
-- **[NUEVO]** Contador dinámico en tiempo real sincronizado mediante Firebase Database para ver la afluencia en cada ZEPA.
-- **[NUEVO]** Arquitectura refactorizada a MVVM.
-- **[NUEVO]** UX fluida con animaciones progresivas en el mapa y persistencia de estado mediante `IndexedStack`.
-- **[NUEVO]** Almacenamiento local persistente (CSV) para el histórico de mediciones de ruido.
-- **[NUEVO]** Flujo de trabajo CI/CD integrado mediante GitHub Actions.
 - Mapa interactivo con las ZEPAs de la zona visible.
 - Detección automática de entrada/salida en zonas ZEPA.
 - Monitorización del nivel de ruido en tiempo real (dB).
 - Alertas visuales (verde / amarillo / rojo) según los umbrales de cada ZEPA.
 - Notificación cuando se supera el umbral de advertencia.
-- Estadística de ruido generado por usuario (UI Mejorada).
+- Estadística de ruido generado por usuario.
+- Inicio de Sesión/Registro con Firebase Authentication (Email).
+- Contador en tiempo real de usuarios en la ZEPA actual.
 
 # Tecnologías
 
@@ -49,7 +45,7 @@
 
 _AVISO: Es necesario tener conexión a internet para cargar el mapa y consultar las zonas ZEPA cercanas._
 
-1. **Instalación:** *(Los instaladores APK estarán disponibles en la sección de Releases de GitHub próximamente)*. Para pruebas locales, clona el repositorio y ejecuta el comando `flutter run` con un dispositivo físico conectado o un emulador configurado.
+1. **Instalación:** *(Los instaladores APK estarán disponibles en la sección de Releases de GitHub próximamente)*.
 2. **Permisos:** Al iniciar, concede los permisos de Ubicación y Micrófono para habilitar el mapa y el sensor de ruido.
 3. **Inicio de Sesión:** Regístrate o entra con tu cuenta autenticada para activar el contador dinámico de usuarios en cada zona. (Los usuarios invitados tienen ciertas funciones restringidas).
 4. **Navegación:** Utiliza el mapa para localizar zonas ZEPA (áreas en verde). Al entrar en una, se activará el monitor de dB y verás cuántas personas más están en la zona.
